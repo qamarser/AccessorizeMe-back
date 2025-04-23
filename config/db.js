@@ -85,6 +85,20 @@ ProductColor.belongsTo(Product, { foreignKey: "product_id" });
 ProductVariant.belongsTo(ProductColor, { foreignKey: "product_color_id" });
 ProductColor.hasMany(ProductVariant, { foreignKey: "product_color_id" });
 
+ProductColor.hasMany(Image, {
+  foreignKey: "related_id",
+  constraints: false,
+  scope: {
+    related_type: "productColor",
+  },
+});
+
+Image.belongsTo(ProductColor, {
+  foreignKey: "related_id",
+  constraints: false,
+});
+
+
 Product.hasMany(Image, { foreignKey: "related_id", constraints: false });
 Image.belongsTo(Product, { foreignKey: "related_id", constraints: false });
 
