@@ -112,7 +112,12 @@ Product.hasMany(StockLog, { foreignKey: "product_id" });
 StockLog.belongsTo(Product, { foreignKey: "product_id" });
 
 Product.hasMany(ProductTag, { foreignKey: "product_id" });
-ProductTag.belongsTo(Product, { foreignKey: "product_id" });
+ProductTag.belongsTo( Product, { foreignKey: "product_id" } );
+
+// CART <-> PRODUCT
+Product.hasMany(Cart, { foreignKey: "product_id" });
+Cart.belongsTo(Product, { foreignKey: "product_id" });
+
 
 // ORDER RELATIONS
 Order.hasMany(OrderItem, { foreignKey: "order_id" });
