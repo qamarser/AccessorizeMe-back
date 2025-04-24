@@ -12,7 +12,8 @@ import { Op } from "sequelize";
 // Admin: Add Product
 export const createProduct = async (req, res) => {
   try {
-    const { name, description, price, stock, category_name } = req.body;
+    const { name, description, price, stock, category_name, variants } =
+      req.body;
 
      const category = await Category.findOne({
        where: { name: category_name },
@@ -30,7 +31,43 @@ export const createProduct = async (req, res) => {
       category_id: category.id,
     });
 
-    res.status(201).json(newProduct);
+     if (variants?.length > 0) {
+       for (const variant of variants) {
+         let productColor = await ProductColor.findOne({
+           where: { color_name: variant.color_name },
+         });
+
+         if (!productColor) {
+           productColor = await ProductColor.create({
+             color_name: variant.color_name,
+             color_code: variant.color_code || "#FFFFFF",
+           });
+         }
+
+         const productVariant = await ProductVariant.create({
+           variant_name: variant.variant_name,
+           stock: variant.stock,
+           additional_price: variant.additional_price,
+           product_id: newProduct.id,
+           color_id: productColor.id,
+         });
+
+         if (variant.images?.length > 0) {
+           await Promise.all(
+             variant.images.map((img) =>
+               Image.create({
+                 image_url: img.image_url,
+                 alt_text: img.alt_text || "",
+                 related_type: "productColor",
+                 related_id: productColor.id,
+               })
+             )
+           );
+         }
+       }
+    }
+    
+    res.status(201).json({ message: "Product created", product: newProduct });
   } catch (err) {
     res
       .status(500)
@@ -38,7 +75,7 @@ export const createProduct = async (req, res) => {
   }
 };
 
-// Admin: Update Product
+
 // Admin: Update Product (category by name)
 export const updateProduct = async (req, res) => {
   try {
