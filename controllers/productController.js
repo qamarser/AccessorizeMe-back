@@ -9,11 +9,20 @@ import
   ProductVariant,
 } from "../config/db.js";
 import { Op } from "sequelize";
+
+
 // Admin: Add Product
 export const createProduct = async (req, res) => {
   try {
     const { name, description, price, stock, category_name, variants } =
       req.body;
+
+    const imageUrls = [];
+    
+    for (const file of req.files) {
+      const imageUrl = await uploadToImgBB(file.path);
+      imageUrls.push(imageUrl);
+    }
 
      const category = await Category.findOne({
        where: { name: category_name },
@@ -31,6 +40,14 @@ export const createProduct = async (req, res) => {
       category_id: category.id,
     });
 
+     await Promise.all(
+       imageUrls.map((url) =>
+         ProductImage.create({ productId: product.id, url })
+       )
+     );
+
+    res.status( 201 ).json( { product, images: imageUrls } );
+    
      if (variants?.length > 0) {
        for (const variant of variants) {
          let productColor = await ProductColor.findOne({

@@ -13,7 +13,7 @@ import orderRoutes from "./routes/orderRoutes.js";
 import shippingRoutes from "./routes/shippingRoutes.js";
 import reviewRoutes from "./routes/reviewRouter.js";
 import variantRoutes from "./routes/variantRoutes.js";
-
+import imageRoutes from "./routes/imageRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -48,7 +48,7 @@ app.use( "/api/orders", orderRoutes );
 app.use( "/api/shipping", shippingRoutes );
 app.use("/api/reviews", reviewRoutes);
 app.use( "/api/variants", variantRoutes );
-
+app.use("/api/images", imageRoutes);
 
 // Start Server
 const PORT = process.env.PORT || 5000;

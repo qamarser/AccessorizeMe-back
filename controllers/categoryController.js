@@ -1,15 +1,25 @@
 import { Product, Category, Image } from "../config/db.js";
+import { uploadToImgBB } from "../utils/uploadToImgBB.js";
 
 // Admin: Add category
 export const createCategory = async (req, res) => {
   try {
-    const { name, background_image_url } = req.body;
-    const category = await Category.create({ name, background_image_url });
-    res.status(201).json(category);
-  } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Failed to create category", error: err.message });
+    const { name } = req.body;
+    const filePath = req.file.path;
+
+    // Upload image to ImgBB
+    const imageUrl = await uploadToImgBB(filePath);
+
+    // Save image URL to background_image_url column in the database
+    const newCategory = await Category.create({
+      name,
+      background_image_url: imageUrl,
+    });
+
+    res.status(201).json({ success: true, data: newCategory });
+  } catch (error) {
+    console.error("Create Category Error:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
   }
 };
 
