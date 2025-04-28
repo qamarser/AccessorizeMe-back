@@ -5,7 +5,11 @@ import { uploadToImgBB } from "../utils/uploadToImgBB.js";
 export const createCategory = async (req, res) => {
   try {
     const { name } = req.body;
-    const filePath = req.file.path;
+    // When using uploadAny, files are in req.files array
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ success: false, message: "No image file uploaded" });
+    }
+    const filePath = req.files[0].path;
 
     // Upload image to ImgBB
     const imageUrl = await uploadToImgBB(filePath);

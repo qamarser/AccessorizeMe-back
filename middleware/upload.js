@@ -13,4 +13,6 @@ const storage = multer.diskStorage({
 });
 
 export const uploadSingle = multer({ storage }).single("image"); // for categories
+export const uploadSingleBackgroundImage = multer({ storage }).single("background_image"); // for categories with background_image field
 export const uploadMultiple = multer({ storage }).array("images", 5); // for products
+export const uploadAny = multer({ storage }).any(); // accept any file fields

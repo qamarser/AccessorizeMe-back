@@ -9,82 +9,110 @@ import
   ProductVariant,
 } from "../config/db.js";
 import { Op } from "sequelize";
+import { uploadToImgBB } from "../utils/uploadToImgBB.js";  // Added import
 
 
 // Admin: Add Product
 export const createProduct = async (req, res) => {
   try {
+    if (!req.body) {
+      return res.status(400).json({ message: "Request body is missing" });
+    }
+
     const { name, description, price, stock, category_name, variants } =
       req.body;
 
+    // Validate and convert stock to integer
+    const stockInt = parseInt(stock, 10);
+    if (isNaN(stockInt)) {
+      return res.status(400).json({ message: "Invalid stock value" });
+    }
+
+    // Validate and convert price to float
+    const priceFloat = parseFloat(price);
+    if (isNaN(priceFloat)) {
+      return res.status(400).json({ message: "Invalid price value" });
+    }
+
     const imageUrls = [];
-    
+
     for (const file of req.files) {
       const imageUrl = await uploadToImgBB(file.path);
       imageUrls.push(imageUrl);
     }
 
-     const category = await Category.findOne({
-       where: { name: category_name },
-     });
+    const category = await Category.findOne({
+      where: { name: category_name },
+    });
 
-     if (!category) {
-       return res.status(400).json({ message: "Category not found" });
+    if (!category) {
+      return res.status(400).json({ message: "Category not found" });
     }
-    
+
     const newProduct = await Product.create({
       name,
       description,
-      price,
-      stock,
+      price: priceFloat,
+      stock: stockInt,
       category_id: category.id,
     });
 
-     await Promise.all(
-       imageUrls.map((url) =>
-         ProductImage.create({ productId: product.id, url })
-       )
-     );
+    // Save main product images
+    await Promise.all(
+      imageUrls.map((url) =>
+        Image.create({
+          related_type: "product",
+          related_id: newProduct.id,
+          image_url: url,
+          alt_text: "",
+        })
+      )
+    );
 
-    res.status( 201 ).json( { product, images: imageUrls } );
-    
-     if (variants?.length > 0) {
-       for (const variant of variants) {
-         let productColor = await ProductColor.findOne({
-           where: { color_name: variant.color_name },
-         });
+    // Handle variants
+    if (variants?.length > 0) {
+      for (const variant of variants) {
+        let productColor = await ProductColor.findOne({
+          where: { color_name: variant.color_name },
+        });
 
-         if (!productColor) {
-           productColor = await ProductColor.create({
-             color_name: variant.color_name,
-             color_code: variant.color_code || "#FFFFFF",
-           });
-         }
+        if (!productColor) {
+          productColor = await ProductColor.create({
+            color_name: variant.color_name,
+            color_code: variant.color_code || "#FFFFFF",
+            product_id: newProduct.id,
+          });
+        }
 
-         const productVariant = await ProductVariant.create({
-           variant_name: variant.variant_name,
-           stock: variant.stock,
-           additional_price: variant.additional_price,
-           product_id: newProduct.id,
-           color_id: productColor.id,
-         });
+        const productVariant = await ProductVariant.create({
+          variant_name: variant.variant_name,
+          stock: variant.stock,
+          additional_price: variant.additional_price || 0,
+          product_id: newProduct.id,
+          color_id: productColor.id,
+        });
 
-         if (variant.images?.length > 0) {
-           await Promise.all(
-             variant.images.map((img) =>
-               Image.create({
-                 image_url: img.image_url,
-                 alt_text: img.alt_text || "",
-                 related_type: "productColor",
-                 related_id: productColor.id,
-               })
-             )
-           );
-         }
-       }
+        // Save images for productColor if provided
+        if (variant.images?.length > 0) {
+          await Promise.all(
+            variant.images.map((img) =>
+              Image.create({
+                image_url: img.image_url,
+                alt_text: img.alt_text || "",
+                related_type: "productColor",
+                related_id: productColor.id,
+              })
+            )
+          );
+        }
+      }
     }
-    
-    res.status(201).json({ message: "Product created", product: newProduct });
+
+    res.status(201).json({
+      message: "Product created",
+      product: newProduct,
+      images: imageUrls,
+    });
   } catch (err) {
     res
       .status(500)
@@ -157,7 +185,7 @@ export const getAllProducts = async (req, res) => {
 
      if (search) {
        whereClause.name = {
-         [Op.iLike]: `%${search}%`, // PostgreSQL; use Op.substring for MySQL
+         [Op.like]: `%${search}%`,
        };
     }
     
@@ -166,7 +194,15 @@ export const getAllProducts = async (req, res) => {
       attributes: ["id", "name", "price"],
       include: [
         {
+          model: Image,
+          where: { related_type: "product" },
+          required: false,
+          attributes: ["image_url", "alt_text"],
+        },
+        {
           model: ProductColor,
+          where: { product_id: { [Op.col]: "Product.id" } }, // Ensures match
+          required: false,
           include: [
             {
               model: Image,
@@ -175,14 +211,15 @@ export const getAllProducts = async (req, res) => {
               attributes: ["image_url", "alt_text"],
             },
           ],
-          required: false,
         },
       ],
     });
 
     const formatted = products.map((product) => {
       let image = null;
-      if (product.ProductColors?.length > 0) {
+      if (product.Images?.length > 0) {
+        image = product.Images[0];
+      } else if (product.ProductColors?.length > 0) {
         const firstColor = product.ProductColors[0];
         image = firstColor.Images?.[0];
       }
