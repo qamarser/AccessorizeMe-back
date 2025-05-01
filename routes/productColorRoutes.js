@@ -6,22 +6,23 @@ import {
   updateProductColor,
   deleteProductColor,
 } from "../controllers/productColorController.js";
+import { isAdmin, verifyToken } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 // Create a new color
-router.post("/", createProductColor);
+router.post("/", verifyToken, isAdmin, createProductColor);
 
 // Get all colors
-router.get("/", getAllProductColors);
+router.get("/",  verifyToken, getAllProductColors);
 
 // Get single color
-router.get("/:id", getProductColorById);
+router.get("/:id",  verifyToken, getProductColorById);
 
 // Update color
-router.put("/:id", updateProductColor);
+router.put("/:id", verifyToken, isAdmin, updateProductColor);
 
 // Delete color
-router.delete("/:id", deleteProductColor);
+router.delete("/:id", verifyToken, isAdmin, deleteProductColor);
 
 export default router;

@@ -1,17 +1,62 @@
-import { ProductColor } from "../config/db.js";
+import { ProductColor, Product, ProductVariant } from "../config/db.js";
 
 // Create a new product color
 export const createProductColor = async (req, res) => {
   try {
-    const { color_name, color_code } = req.body;
+    const { color_name, color_code, product_id } = req.body;
 
-    const existing = await ProductColor.findOne({ where: { color_name } });
-    if (existing) {
-      return res.status(400).json({ message: "Color already exists" });
+    if (!product_id) {
+      return res.status(400).json({ message: "product_id is required" });
     }
 
-    const newColor = await ProductColor.create({ color_name, color_code });
-    res.status(201).json({ message: "Color created", color: newColor });
+    // Check if product exists
+    const product = await Product.findByPk(product_id);
+    if (!product) {
+      return res.status(400).json({ message: "Product not found" });
+    }
+
+    const existing = await ProductColor.findOne({ where: { color_name, product_id } });
+    if (existing) {
+      return res.status(400).json({ message: "Color already exists for this product" });
+    }
+
+    const newColor = await ProductColor.create({ color_name, color_code, product_id });
+
+    // Automatically link existing ProductVariants without product_color_id to this new ProductColor if color_name matches
+    const variantsToUpdate = await ProductVariant.findAll({
+      where: {
+        product_id,
+        product_color_id: null,
+      },
+    });
+
+    let updatedCount = 0;
+
+    // Function to normalize spaces: trim and replace multiple spaces with single space
+    const normalizeSpaces = (str) => str.trim().replace(/\s+/g, " ").toLowerCase();
+
+    const normalizedColorName = normalizeSpaces(color_name);
+
+    for (const variant of variantsToUpdate) {
+      const variantName = normalizeSpaces(variant.variant_name || "");
+      const variantValue = normalizeSpaces(variant.variant_value || "");
+
+      if (
+        variantName === normalizedColorName ||
+        variantValue === normalizedColorName ||
+        variantName.includes(normalizedColorName) ||
+        variantValue.includes(normalizedColorName)
+      ) {
+        variant.product_color_id = newColor.id;
+        await variant.save();
+        updatedCount++;
+      }
+    }
+
+    res.status(201).json({
+      message: `Color created for product and linked to ${updatedCount} variants`,
+      color: newColor,
+    });
   } catch (err) {
     res
       .status(500)

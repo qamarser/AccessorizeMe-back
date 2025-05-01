@@ -89,7 +89,7 @@ export const createProduct = async (req, res) => {
           stock: variant.stock,
           additional_price: variant.additional_price || 0,
           product_id: newProduct.id,
-          color_id: productColor.id,
+          product_color_id: productColor.id,
         });
 
         // Save images for productColor if provided
