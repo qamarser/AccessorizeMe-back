@@ -8,9 +8,9 @@ import
   ProductColor,
   ProductVariant,
 } from "../config/db.js";
-import { Op } from "sequelize";
+import { Op} from "sequelize";
 import { uploadToImgBB } from "../utils/uploadToImgBB.js";  // Added import
-
+import sequelize from "sequelize";
 
 // Admin: Add Product
 export const createProduct = async (req, res) => {
@@ -320,5 +320,74 @@ export const getProductById = async (req, res) => {
     res
       .status(500)
       .json({ message: "Failed to fetch product details", error: err.message });
+  }
+};
+
+// User: Fetch best sellers products (productname, img, review, price)
+export const getBestSellersProducts = async (req, res) => {
+  try {
+    // Fetch products with average rating and review count using subqueries
+    const products = await Product.findAll({
+      attributes: [
+        "id",
+        "name",
+        "price",
+        [
+          sequelize.literal(`(
+            SELECT AVG(rating)
+            FROM reviews AS review
+            WHERE review.product_id = Product.id
+          )`),
+          "avgRating",
+        ],
+        [
+          sequelize.literal(`(
+            SELECT COUNT(*)
+            FROM reviews AS review
+            WHERE review.product_id = Product.id
+          )`),
+          "reviewCount",
+        ],
+      ],
+      include: [
+        {
+          model: Image,
+          where: { related_type: "product" },
+          required: false,
+          attributes: ["image_url"],
+        },
+      ],
+      having: sequelize.and(
+        sequelize.literal(`(
+          SELECT AVG(rating)
+          FROM reviews AS review
+          WHERE review.product_id = Product.id
+        ) >= 3`),
+        sequelize.literal(`(
+          SELECT AVG(rating)
+          FROM reviews AS review
+          WHERE review.product_id = Product.id
+        ) <= 5`)
+      ),
+      order: [[sequelize.literal("reviewCount"), "DESC"]],
+      limit: 10,
+      group: ['Product.id']
+    });
+
+    // Format the response
+    const formatted = products.map((product) => {
+      return {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image_url: product.Images[0]?.image_url || null,
+        avgRating: parseFloat(product.get("avgRating")) || 0,
+        reviewCount: parseInt(product.get("reviewCount")) || 0,
+      };
+    });
+
+    res.json(formatted);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch best sellers", error: err.message });
   }
 };
