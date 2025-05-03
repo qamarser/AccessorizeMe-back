@@ -15,6 +15,7 @@ import reviewRoutes from "./routes/reviewRouter.js";
 import variantRoutes from "./routes/variantRoutes.js";
 import imageRoutes from "./routes/imageRoutes.js";
 import productColorRoutes from "./routes/productColorRoutes.js";
+import wishlistRoutes from "./routes/wishlistRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -51,6 +52,7 @@ app.use("/api/reviews", reviewRoutes);
 app.use( "/api/variants", variantRoutes );
 app.use("/api/images", imageRoutes);
 app.use( "/api/productcolors", productColorRoutes );
+app.use("/api/wishlist", wishlistRoutes);
 
 // Start Server
 const PORT = process.env.PORT || 5000;

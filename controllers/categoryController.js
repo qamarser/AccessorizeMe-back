@@ -1,5 +1,6 @@
 import { Product, Category, Image } from "../config/db.js";
 import { uploadToImgBB } from "../utils/uploadToImgBB.js";
+import { Op } from "sequelize";
 
 // Admin: Add category
 export const createCategory = async (req, res) => {
@@ -7,7 +8,9 @@ export const createCategory = async (req, res) => {
     const { name } = req.body;
     // When using uploadAny, files are in req.files array
     if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ success: false, message: "No image file uploaded" });
+      return res
+        .status(400)
+        .json({ success: false, message: "No image file uploaded" });
     }
     const filePath = req.files[0].path;
 
@@ -72,14 +75,40 @@ export const getCategoryById = async (req, res) => {
     }
     res.json(category);
   } catch (err) {
-    res.status(500).json({ message: "Failed to fetch category", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to fetch category", error: err.message });
   }
 };
-    
+
 // User: Get all products under a specific category
 export const getProductsByCategory = async (req, res) => {
   try {
     const categoryId = req.params.id;
+    const { search, minPrice, maxPrice } = req.query;
+      const whereClause = {
+        category_id: categoryId,
+      };
+
+      if (search) {
+        whereClause.name = { [Op.like]: `%${search}%` };
+      }
+
+      if (minPrice) {
+        whereClause.price = {
+          ...whereClause.price,
+          [Op.gte]: parseFloat(minPrice),
+        };
+      }
+
+      if (maxPrice) {
+        whereClause.price = {
+          ...whereClause.price,
+          [Op.lte]: parseFloat(maxPrice),
+          ...(whereClause.price || {}),
+        };
+    }
+    
     const products = await Product.findAll({
       where: { category_id: categoryId },
       attributes: ["id", "name", "price"],

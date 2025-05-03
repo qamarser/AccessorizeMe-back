@@ -52,6 +52,10 @@ Cart.belongsTo(User, { foreignKey: "user_id" });
 User.hasMany(Wishlist, { foreignKey: "user_id" });
 Wishlist.belongsTo(User, { foreignKey: "user_id" });
 
+// Add association between Wishlist and Product
+Product.hasMany(Wishlist, { foreignKey: "product_id" });
+Wishlist.belongsTo(Product, { foreignKey: "product_id" });
+
 User.hasMany(Review, { foreignKey: "user_id" });
 Review.belongsTo(User, { foreignKey: "user_id" });
 

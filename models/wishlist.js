@@ -1,10 +1,14 @@
 import { DataTypes } from "sequelize";
 
 export default (sequelize) => {
+  const { INTEGER, DATE } = DataTypes;
+
   return sequelize.define(
     "Wishlist",
     {
-      added_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+      user_id: { type: INTEGER, allowNull: false },
+      product_id: { type: INTEGER, allowNull: false },
+      added_at: { type: DATE, defaultValue: DATE.NOW },
     },
     { timestamps: false }
   );
