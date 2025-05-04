@@ -1,5 +1,7 @@
 import { User, Image } from "../config/db.js";
 import jwt from "jsonwebtoken";
+import { uploadToImgBB } from "../utils/uploadToImgBB.js";
+import bcrypt from "bcrypt";
 
 // Get User Profile
 export const getUserProfile = async (req, res) => {
@@ -137,6 +139,103 @@ export const updateUserProfile = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating user profile:", error); // Log the error details
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// function to upload user profile image
+export const uploadUserProfileImage = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    if (!req.file) {
+      return res.status(400).json({ message: "No image file uploaded" });
+    }
+
+    // Optionally upload to ImgBB and get URL
+    let imageUrl = null;
+    if (uploadToImgBB) {
+      try {
+        const imgbbResponse = await uploadToImgBB(req.file.path);
+        if (imgbbResponse && imgbbResponse.data && imgbbResponse.data.url) {
+          imageUrl = imgbbResponse.data.url;
+        } else {
+          throw new Error("Invalid ImgBB response");
+        }
+      } catch (uploadError) {
+        console.error("ImgBB upload failed:", uploadError);
+        // fallback to local file path
+        imageUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+      }
+    } else {
+      imageUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+    }
+
+    // Save or update image record in DB
+    let image = await Image.findOne({ where: { user_id: userId } });
+    if (image) {
+      image.image_url = imageUrl;
+      await image.save();
+    } else {
+      image = await Image.create({
+        user_id: userId,
+        image_url: imageUrl,
+        alt_text: "User profile image",
+      });
+    }
+
+    // Return updated user profile with image URL
+    const user = await User.findByPk(userId, {
+      attributes: ["id", "name", "email"],
+      include: [
+        {
+          model: Image,
+          as: "profileImage",
+          attributes: ["id", "image_url", "alt_text"],
+        },
+      ],
+    });
+
+    res.json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      profileImage: imageUrl,
+    });
+  } catch (error) {
+    console.error("Error uploading user profile image:", error);
+    res.status(500).json({ message: "Failed to upload image", error: error.message });
+  }
+};
+
+
+// Change Password (for logged-in users)
+export const changePassword = async (req, res) => {
+  try {
+    const userId = req.user.id; // From verifyToken middleware
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res
+        .status(400)
+        .json({ message: "Both current and new passwords are required" });
+    }
+
+    const user = await User.findByPk(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Current password is incorrect" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.json({ message: "Password changed successfully" });
+  } catch (error) {
+    console.error("Password change error:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };

@@ -8,13 +8,4 @@ router.post("/signup", signup);
 router.post("/login", login);
 router.post("/logout", logout);
 
-// Protected Example:
-router.get("/profile", verifyToken, (req, res) => {
-  res.json({ message: "Welcome!", user: req.user });
-});
-
-router.get("/admin", verifyToken, isAdmin, (req, res) => {
-  res.json({ message: "Admin access granted." });
-});
-
 export default router;
