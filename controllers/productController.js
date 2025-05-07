@@ -8,7 +8,7 @@ import
   ProductColor,
   ProductVariant,
 } from "../config/db.js";
-import { Op} from "sequelize";
+import { Op, fn, col } from "sequelize";
 import { uploadToImgBB } from "../utils/uploadToImgBB.js";  // Added import
 import sequelize from "sequelize";
 
@@ -278,6 +278,14 @@ export const getProductById = async (req, res) => {
 
     if (!product) return res.status(404).json({ message: "Product not found" });
 
+    const avgRatingData = await Review.findOne({
+      attributes: [[fn("AVG", col("rating")), "avgRating"]],
+      where: { product_id: product.id },
+      raw: true,
+    });
+
+    const averageRating = parseFloat(avgRatingData.avgRating || 0).toFixed(1);
+
     // Fetch images for each product color
     const productColors = product.ProductVariants.flatMap((variant) =>
       variant.ProductColor ? [variant.ProductColor] : []
@@ -315,7 +323,13 @@ export const getProductById = async (req, res) => {
       }
     });
 
-    res.json(product);
+    // Attach average rating to product
+    const productWithRating = {
+      ...product.toJSON(),
+      averageRating,
+    };
+
+    res.json(productWithRating);
   } catch (err) {
     res
       .status(500)

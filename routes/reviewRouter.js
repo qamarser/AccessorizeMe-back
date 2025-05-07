@@ -11,6 +11,6 @@ const router = express.Router();
 router.post("/add", verifyToken, createReview);
 
 // Route for getting reviews for a product
-router.get("/product/:productId", verifyToken, getProductReviews);
+router.get("/product/:productId", getProductReviews);
 
 export default router;

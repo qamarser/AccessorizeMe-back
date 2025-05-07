@@ -8,7 +8,6 @@ import {
 } from "../config/db.js";
 
 // Place an order (customer)
-// Place an order (customer)
 export const placeOrder = async (req, res) => {
   try {
     const user_id = req.user.id;

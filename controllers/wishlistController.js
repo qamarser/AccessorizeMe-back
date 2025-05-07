@@ -43,9 +43,10 @@ export const getWishlist = async (req, res) => {
 export const removeFromWishlist = async (req, res) => {
   try {
     const user_id = req.user.id;
-    const { product_id } = req.params;
+    const { id } = req.params;
 
-    const deleted = await Wishlist.destroy({ where: { user_id, product_id } });
+    // Delete by wishlist item id and user_id to ensure ownership
+    const deleted = await Wishlist.destroy({ where: { id, user_id } });
     if (!deleted) return res.status(404).json({ message: "Item not found" });
 
     res.json({ message: "Item removed from wishlist" });

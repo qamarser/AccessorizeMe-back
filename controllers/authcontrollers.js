@@ -7,7 +7,8 @@ export const signup = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
-    const existingUser = await User.findOne({ where: { email } });
+    const existingUser = await User.findOne({ where: { email } }); // Sequelize syntax: use `where: { email }`
+
     if (existingUser)
       return res.status(400).json({ message: "Email already in use" });
 
@@ -55,7 +56,7 @@ export const login = async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production", // only send cookie over HTTPS
       sameSite: "Strict",
-      maxAge: parseInt(process.env.COOKIE_EXPIRES),
+      maxAge: parseInt(process.env.COOKIE_EXPIRES) || 24 * 60 * 60 * 1000, // 1 day default
     });
 
     res.json({
@@ -72,4 +73,19 @@ export const login = async (req, res) => {
 export const logout = (req, res) => {
   res.clearCookie("token");
   res.json({ message: "Logged out successfully" });
+};
+
+
+export const currentUser = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id, {
+      attributes: ["id", "name", "email", "role"],
+    });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json({ user });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 };

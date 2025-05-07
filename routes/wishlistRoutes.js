@@ -10,6 +10,6 @@ const router = express.Router();
 
 router.post("/", verifyToken, addToWishlist); // Add to wishlist
 router.get("/", verifyToken, getWishlist); // Get all wishlist items
-router.delete("/:product_id", verifyToken, removeFromWishlist); // Remove item
+router.delete("/:id", verifyToken, removeFromWishlist); // Remove item
 
 export default router;
