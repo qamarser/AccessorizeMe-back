@@ -14,10 +14,10 @@ const router = express.Router();
 router.post("/", verifyToken, isAdmin, createProductColor);
 
 // Get all colors
-router.get("/",  verifyToken, getAllProductColors);
+router.get("/", getAllProductColors);
 
 // Get single color
-router.get("/:id",  verifyToken, getProductColorById);
+router.get("/:id",  getProductColorById);
 
 // Update color
 router.put("/:id", verifyToken, isAdmin, updateProductColor);

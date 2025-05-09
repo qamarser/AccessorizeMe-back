@@ -155,3 +155,55 @@ export const getAllOrders = async (req, res) => {
       .json({ message: "Error fetching all orders", error: err.message });
   }
 };
+
+
+// Admin: Update order status
+export const updateOrderStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status } = req.body;
+
+    const order = await Order.findByPk(orderId);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    if (!["pending", "shipped", "delivered", "canceled"].includes(status)) {
+      return res.status(400).json({ message: "Invalid order status" });
+    }
+
+    await order.update({ status });
+
+    res.status(200).json({ message: "Order status updated", order });
+  } catch (err) {
+    res.status(500).json({ message: "Error updating order", error: err.message });
+  }
+};
+
+// Admin: Delete an order
+export const deleteOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const order = await Order.findByPk(orderId, {
+      include: [OrderItem, Payment, Shipping],
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Delete order items, shipping, and payment (if needed)
+    await Promise.all([
+      OrderItem.destroy({ where: { order_id: order.id } }),
+      Shipping.destroy({ where: { id: order.shipping_id } }),
+      Payment.destroy({ where: { id: order.payment_id } }),
+    ]);
+
+    await order.destroy();
+
+    res.status(200).json({ message: "Order deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Error deleting order", error: err.message });
+  }
+};

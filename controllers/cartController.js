@@ -1,4 +1,4 @@
-import { Cart, Product, User } from "../config/db.js";
+import { Cart, Product, User, Image } from "../config/db.js";
 
 // Add to cart
 export const addToCart = async (req, res) => {
@@ -37,9 +37,28 @@ export const getCart = async (req, res) => {
     const user_id = req.user.id;
     const cart = await Cart.findAll({
       where: { user_id },
-      include: [{ model: Product }],
+      include: [
+        {
+          model: Product,
+          attributes: ["id", "name", "price"],
+          include: [
+            {
+              model: Image,
+              where: { related_type: "product" },
+              required: false,
+              attributes: ["image_url", "alt_text"],
+            },
+          ],
+        },
+      ],
     });
-    res.status(200).json(cart);
+
+    const total = cart.reduce(
+      (sum, item) => sum + (item.Product?.price || 0) * item.quantity,
+      0
+    );
+
+    res.status(200).json({ items: cart, total });
   } catch (err) {
     res
       .status(500)
@@ -82,5 +101,18 @@ export const deleteCartItem = async (req, res) => {
     res
       .status(500)
       .json({ message: "Error deleting cart item", error: err.message });
+  }
+};
+
+
+// Clear cart for a user
+export const clearCart = async (req, res) => {
+  try {
+    const user_id = req.user.id;
+    await Cart.destroy({ where: { user_id } });
+    res.status(200).json({ message: "Cart cleared" });
+  } catch (err) {
+    console.error("Error clearing cart:", err.message);
+    res.status(500).json({ message: "Error clearing cart", error: err.message });
   }
 };

@@ -52,11 +52,21 @@ export const login = async (req, res) => {
 { expiresIn: isNaN(Number(process.env.JWT_EXPIRATION)) ? process.env.JWT_EXPIRATION : Number(process.env.JWT_EXPIRATION) }
     );
 
+    console.log("Generated token:", token);
+    console.log("User role:", user.role);
+
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production", // only send cookie over HTTPS
-      sameSite: "Strict",
+      sameSite: "Strict", // changed from Strict to Lax to improve cookie sending
       maxAge: parseInt(process.env.COOKIE_EXPIRES) || 24 * 60 * 60 * 1000, // 1 day default
+    });
+
+    console.log("Cookie set with options:", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: parseInt(process.env.COOKIE_EXPIRES) || 24 * 60 * 60 * 1000,
     });
 
     res.json({

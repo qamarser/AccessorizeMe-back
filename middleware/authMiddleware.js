@@ -3,14 +3,14 @@ import { User } from "../config/db.js";
 
 export const verifyToken = async (req, res, next) => {
   try {
-    // console.log("Cookies:", req.cookies);
+    console.log("Cookies:", req.cookies);
     const token = req.cookies.token;
 
     if (!token)
       return res.status(401).json({ message: "Unauthorized. No token." });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // console.log("Decoded:", decoded);
+    console.log("Decoded:", decoded);
 
     const user = await User.findByPk(decoded.id);
     if (!user)
