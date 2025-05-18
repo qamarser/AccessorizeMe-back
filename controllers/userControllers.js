@@ -131,11 +131,23 @@ export const updateUserProfile = async (req, res) => {
 
     await user.save();
 
+    // Fetch user again with profileImage association to include image in response
+    const updatedUser = await User.findByPk(userId, {
+      attributes: ["id", "name", "email"],
+      include: [
+        {
+          model: Image,
+          as: "profileImage",
+          attributes: ["id", "image_url", "alt_text"],
+        },
+      ],
+    });
+
     res.json({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      profileImage: user.profileImage ? user.profileImage.image_url : null,
+      id: updatedUser.id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      profileImage: updatedUser.profileImage ? updatedUser.profileImage.image_url : null,
     });
   } catch (error) {
     console.error("Error updating user profile:", error); // Log the error details
@@ -157,8 +169,8 @@ export const uploadUserProfileImage = async (req, res) => {
     if (uploadToImgBB) {
       try {
         const imgbbResponse = await uploadToImgBB(req.file.path);
-        if (imgbbResponse && imgbbResponse.data && imgbbResponse.data.url) {
-          imageUrl = imgbbResponse.data.url;
+        if (imgbbResponse) {
+          imageUrl = imgbbResponse;
         } else {
           throw new Error("Invalid ImgBB response");
         }

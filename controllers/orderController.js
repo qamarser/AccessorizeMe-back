@@ -5,6 +5,7 @@ import {
   Shipping,
   Payment,
   User,
+  Cart,
 } from "../config/db.js";
 
 // Place an order (customer)
@@ -52,6 +53,9 @@ export const placeOrder = async (req, res) => {
       
     await order.update({ total_amount: totalAmount });
 
+    // Clear user's cart after order placement
+    await Cart.destroy({ where: { user_id } });
+
     // Re-fetch order to ensure value is included in response
 const updatedOrder = await Order.findByPk(order.id, {
   attributes: [
@@ -65,14 +69,14 @@ const updatedOrder = await Order.findByPk(order.id, {
   include: [{ model: OrderItem, include: [Product] }, Shipping, Payment],
 });
 
-    //   console.log( "Updated Order:", updatedOrder.toJSON() );
+//   console.log( "Updated Order:", updatedOrder.toJSON() );
       
-    res.status(201).json({
-      message: "Order placed successfully",
-      order: updatedOrder,
-      orderItems,
-        totalAmount,
-    });
+res.status(201).json({
+  message: "Order placed successfully",
+  order: updatedOrder,
+  orderItems,
+    totalAmount,
+});
   } catch (err) {
     res
       .status(500)

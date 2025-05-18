@@ -6,49 +6,181 @@ import
   Review,
   Category,
   ProductColor,
-  ProductVariant,
+    ProductVariant,
+  // Tag,
 } from "../config/db.js";
 import { Op, fn, col } from "sequelize";
 import { uploadToImgBB } from "../utils/uploadToImgBB.js";  // Added import
 import sequelize from "sequelize";
 
 // Admin: Add Product
+// export const createProduct = async (req, res) => {
+//   try {
+//     if (!req.body) {
+//       return res.status(400).json({ message: "Request body is missing" });
+//     }
+
+//     const { name, description, price, stock, category_name, variants, Tag } =
+//       req.body;
+
+//     // Validate and convert stock to integer
+//     const stockInt = parseInt(stock, 10);
+//     if (isNaN(stockInt)) {
+//       return res.status(400).json({ message: "Invalid stock value" });
+//     }
+
+//     // Validate and convert price to float
+//     const priceFloat = parseFloat(price);
+//     if (isNaN(priceFloat)) {
+//       return res.status(400).json({ message: "Invalid price value" });
+//     }
+
+//     const imageUrls = [];
+
+//     for (const file of req.files) {
+//       const imageUrl = await uploadToImgBB(file.path);
+//       imageUrls.push(imageUrl);
+//     }
+
+//     // Find or create the category
+//     const category = await Category.findOne({
+//       where: { name: category_name },
+//     });
+
+//     if (!category) {
+//       return res.status(400).json({ message: "Category not found" });
+//     }
+
+//     const newProduct = await Product.create({
+//       name,
+//       description,
+//       price: priceFloat,
+//       stock: stockInt,
+//       category_id: category.id,
+//     });
+
+//     // Handle tags
+//     if (tags?.length > 0) {
+//       const tagInstances = await Promise.all(
+//         tags.map((tagName) =>
+//           Tag.findOrCreate({ where: { name: tagName.trim() } }).then(
+//             ([tag]) => tag
+//           )
+//         )
+//       );
+//       await newProduct.setTags(tagInstances);
+//     }
+
+//     // Handle general product images
+//     if (images?.length > 0) {
+//       const uploadedImages = await Promise.all(
+//         images.map(async (file) => {
+//           const uploadedUrl = await uploadToImgBB(file.path);
+//           return {
+//             image_url: uploadedUrl,
+//             alt_text: file.alt_text || "",
+//             related_type: "product",
+//             related_id: newProduct.id,
+//           };
+//         })
+//       );
+//       await Image.bulkCreate(uploadedImages);
+//     }
+
+    
+//     // Save main product images
+//     await Promise.all(
+//       imageUrls.map((url) =>
+//         Image.create({
+//           related_type: "product",
+//           related_id: newProduct.id,
+//           image_url: url,
+//           alt_text: "",
+//         })
+//       )
+//     );
+
+//     // Handle variants
+//     if (variants?.length > 0) {
+//       for (const variant of variants) {
+//         let productColor = await ProductColor.findOne({
+//           where: { color_name: variant.color_name },
+//         });
+
+//         if (!productColor) {
+//           productColor = await ProductColor.create({
+//             color_name: variant.color_name,
+//             color_code: variant.color_code || "#FFFFFF",
+//             product_id: newProduct.id,
+//           });
+//         }
+
+//         const productVariant = await ProductVariant.create({
+//           variant_name: variant.variant_name,
+//           stock: variant.stock,
+//           additional_price: parseFloat(variant.additional_price || 0),
+//           product_id: newProduct.id,
+//           product_color_id: productColor.id,
+//         });
+
+//         // Save images for productColor if provided
+//         if (variant.images?.length > 0) {
+//           await Promise.all(
+//             variant.images.map((img) =>
+//               Image.create({
+//                 image_url: img.image_url,
+//                 alt_text: img.alt_text || "",
+//                 related_type: "productColor",
+//                 related_id: productColor.id,
+//               })
+//             )
+//           );
+//         }
+//       }
+//     }
+
+//     res.status(201).json({
+//       message: "Product created",
+//       product: newProduct,
+//       images: imageUrls,
+//     });
+//   } catch (err) {
+//     res
+//       .status(500)
+//       .json({ message: "Failed to create product", error: err.message });
+//   }
+// };
 export const createProduct = async (req, res) => {
   try {
-    if (!req.body) {
-      return res.status(400).json({ message: "Request body is missing" });
-    }
+    const {
+      name,
+      description,
+      price,
+      stock,
+      category_name,
+      // tags,
+      variants,
+    } = req.body;
 
-    const { name, description, price, stock, category_name, variants } =
-      req.body;
+    const files = req.files || []; // Multer files
+    const imageUrls = await Promise.all(
+      files.map(async (file) => await uploadToImgBB(file.path))
+    );
 
-    // Validate and convert stock to integer
-    const stockInt = parseInt(stock, 10);
-    if (isNaN(stockInt)) {
-      return res.status(400).json({ message: "Invalid stock value" });
-    }
-
-    // Validate and convert price to float
+    // Validate and convert price and stock
     const priceFloat = parseFloat(price);
-    if (isNaN(priceFloat)) {
-      return res.status(400).json({ message: "Invalid price value" });
+    const stockInt = parseInt(stock, 10);
+    if (isNaN(priceFloat) || isNaN(stockInt)) {
+      return res.status(400).json({ message: "Invalid price or stock" });
     }
 
-    const imageUrls = [];
-
-    for (const file of req.files) {
-      const imageUrl = await uploadToImgBB(file.path);
-      imageUrls.push(imageUrl);
-    }
-
-    const category = await Category.findOne({
-      where: { name: category_name },
-    });
-
+    // Get or create category
+    const category = await Category.findOne({ where: { name: category_name } });
     if (!category) {
       return res.status(400).json({ message: "Category not found" });
     }
 
+    // Create product
     const newProduct = await Product.create({
       name,
       description,
@@ -57,23 +189,50 @@ export const createProduct = async (req, res) => {
       category_id: category.id,
     });
 
-    // Save main product images
+    // Upload and save main product images
     await Promise.all(
       imageUrls.map((url) =>
         Image.create({
-          related_type: "product",
-          related_id: newProduct.id,
           image_url: url,
           alt_text: "",
+          related_type: "product",
+          related_id: newProduct.id,
         })
       )
     );
 
-    // Handle variants
+    // // Handle tags
+    // if (tags?.length > 0) {
+    //   const tagInstances = await Promise.all(
+    //     tags.map((tagName) =>
+    //       Tag.findOrCreate({ where: { name: tagName.trim() } }).then(([tag]) => tag)
+    //     )
+    //   );
+    //   await newProduct.setTags(tagInstances);
+    // }
+
+    // Handle variants and product colors
     if (variants?.length > 0) {
       for (const variant of variants) {
+        // Upload variant images if needed
+        const colorImageUrls = [];
+
+        if (variant.images?.length > 0) {
+          for (const file of variant.images) {
+            const uploadedUrl = await uploadToImgBB(file.path); // or file if base64
+            colorImageUrls.push({
+              image_url: uploadedUrl,
+              alt_text: file.alt_text || "",
+            });
+          }
+        }
+
+        // Create or find ProductColor (unique per product)
         let productColor = await ProductColor.findOne({
-          where: { color_name: variant.color_name },
+          where: {
+            color_name: variant.color_name,
+            product_id: newProduct.id,
+          },
         });
 
         if (!productColor) {
@@ -84,18 +243,10 @@ export const createProduct = async (req, res) => {
           });
         }
 
-        const productVariant = await ProductVariant.create({
-          variant_name: variant.variant_name,
-          stock: variant.stock,
-          additional_price: variant.additional_price || 0,
-          product_id: newProduct.id,
-          product_color_id: productColor.id,
-        });
-
-        // Save images for productColor if provided
-        if (variant.images?.length > 0) {
+        // Save color images
+        if (colorImageUrls.length > 0) {
           await Promise.all(
-            variant.images.map((img) =>
+            colorImageUrls.map((img) =>
               Image.create({
                 image_url: img.image_url,
                 alt_text: img.alt_text || "",
@@ -105,18 +256,26 @@ export const createProduct = async (req, res) => {
             )
           );
         }
+
+        // Create variant
+        await ProductVariant.create({
+          variant_name: variant.variant_name,
+          stock: parseInt(variant.stock, 10) || 0,
+          additional_price: parseFloat(variant.additional_price || 0),
+          product_id: newProduct.id,
+          product_color_id: productColor.id,
+        });
       }
     }
 
     res.status(201).json({
-      message: "Product created",
+      message: "Product created successfully",
       product: newProduct,
       images: imageUrls,
-    });
+    } );
   } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Failed to create product", error: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Failed to create product", error: err.message });
   }
 };
 
@@ -157,7 +316,8 @@ export const updateProduct = async (req, res) => {
 // Admin: Delete Product
 export const deleteProduct = async (req, res) => {
   try {
-    await Product.destroy({ where: { id: req.params.id } });
+    await Product.destroy( { where: { id: req.params.id } } );
+    if (!deleted) return res.status(404).json({ message: "Product not found" });
     res.json({ message: "Product deleted" });
   } catch (err) {
     res
@@ -170,34 +330,53 @@ export const deleteProduct = async (req, res) => {
 // GET /products?category=3
 export const getAllProducts = async (req, res) => {
   try {
-    const { category, minPrice, maxPrice, search } = req.query;
+    const {
+      category,
+      minPrice,
+      maxPrice,
+      search,
+      page = 1,
+      sortBy = "name",
+      sortOrder = "ASC",
+    } = req.query;
 
     // const whereClause = category ? { category_id: category } : {};
     const whereClause = {};
 
-     if (category) whereClause.category_id = category;
+    if (category) whereClause.category_id = category;
 
-     if (minPrice || maxPrice) {
-       whereClause.price = {};
-       if (minPrice) whereClause.price[Op.gte] = parseFloat(minPrice);
-       if (maxPrice) whereClause.price[Op.lte] = parseFloat(maxPrice);
-     }
-
-     if (search) {
-       whereClause.name = {
-         [Op.like]: `%${search}%`,
-       };
+    if (minPrice || maxPrice) {
+      whereClause.price = {};
+      if (minPrice) whereClause.price[Op.gte] = parseFloat(minPrice);
+      if (maxPrice) whereClause.price[Op.lte] = parseFloat(maxPrice);
     }
-    
+
+    if (search) {
+      whereClause.name = {
+        [Op.like]: `%${search}%`,
+      };
+    }
+
+    // Fixed limit of 10 products per page
+    const limit = 10;
+
+    const offset = (parseInt(page) - 1) * limit;
+
+    // Get total count for pagination
+    const totalCount = await Product.count({ where: whereClause });
+
+       
+    // Get the products with pagination and sorting
     const products = await Product.findAll({
       where: whereClause,
       attributes: ["id", "name", "price"],
       include: [
         {
           model: Image,
-          where: { related_type: "product" },
-          required: false,
-          attributes: ["image_url", "alt_text"],
+          // where: { related_type: "product" },
+          // required: false,
+          // attributes: ["image_url", "alt_text"],
+          // limit: 1, // Only one image
         },
         {
           model: ProductColor,
@@ -206,38 +385,58 @@ export const getAllProducts = async (req, res) => {
           include: [
             {
               model: Image,
-              where: { related_type: "productColor" },
-              required: false,
-              attributes: ["image_url", "alt_text"],
+              // where: { related_type: "productColor" },
+              // required: false,
+              // attributes: ["image_url", "alt_text"],
+              // limit: 1, // One image per color
             },
           ],
         },
+        {
+          model: Category,
+          attributes: ["name"],
+          required: false,
+        },
       ],
+      order: [[sortBy, sortOrder]], // Sorting by provided field and order
+      // limit: parseInt(limit), // Number of results per page
+      limit: limit, // Always 10 products per page
+      offset: offset,
     });
 
     const formatted = products.map((product) => {
-      let image = null;
-      if (product.Images?.length > 0) {
-        image = product.Images[0];
-      } else if (product.ProductColors?.length > 0) {
-        const firstColor = product.ProductColors[0];
-        image = firstColor.Images?.[0];
+      const prod = product.toJSON();
+      let image = prod.Images?.[0];
+
+      // Fallback to ProductColor image
+      if (!image && prod.ProductColors?.length > 0) {
+        image = prod.ProductColors[0]?.Images?.[0] || null;
       }
 
       return {
-        id: product.id,
-        name: product.name,
-        price: product.price,
+        id: prod.id,
+        name: prod.name,
+        description: prod.description,
+        price: prod.price,
+        stock: prod.stock,
+        category_name: prod.Category?.name || null,
         image_url: image?.image_url || null,
         alt_text: image?.alt_text || null,
       };
     });
 
-    res.json(formatted);
+    // res.json(formatted);
+    res.json({
+     formatted,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: parseInt(page),
+    });
   } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Failed to fetch products", error: err.message });
+    res.status(500).json({
+      message: "Failed to fetch products",
+      error: err.message,
+    });
   }
 };
 
@@ -264,20 +463,59 @@ export const getProductById = async (req, res) => {
           ],
         },
         {
+          model: ProductColor,
+          attributes: ["id", "color_name", "color_code"],
+          include: [
+            {
+              model: Image,
+              required: false,
+              attributes: ["image_url", "alt_text"],
+            },
+          ],
+        },
+        /*
+        {
           model: ProductVariant,
-          attributes: ["variant_name", "stock", "additional_price"],
+          attributes: ["id", "variant_name", "stock", "additional_price"],
           include: [
             {
               model: ProductColor,
               attributes: ["id", "color_name", "color_code"],
+              include: [
+                {
+                  model: Image,
+                  where: { related_type: "productColor" },
+                  required: false,
+                  attributes: ["image_url", "alt_text"],
+                },
+              ],
+            },
+            {
+              model: Image,
+              where: { related_type: "productVariant" },
+              required: false,
+              attributes: ["image_url", "alt_text"],
             },
           ],
         },
+        */
       ],
     });
 
+
     if (!product) return res.status(404).json({ message: "Product not found" });
 
+    // Rename Images -> images for consistency in ProductVariants
+    /*
+    product.ProductVariants.forEach((variant) => {
+      if (variant.ProductColor?.Images) {
+        variant.ProductColor.images = variant.ProductColor.Images;
+        delete variant.ProductColor.Images;
+      }
+    });
+    */
+
+    // Calculate average rating
     const avgRatingData = await Review.findOne({
       attributes: [[fn("AVG", col("rating")), "avgRating"]],
       where: { product_id: product.id },
@@ -285,43 +523,6 @@ export const getProductById = async (req, res) => {
     });
 
     const averageRating = parseFloat(avgRatingData.avgRating || 0).toFixed(1);
-
-    // Fetch images for each product color
-    const productColors = product.ProductVariants.flatMap((variant) =>
-      variant.ProductColor ? [variant.ProductColor] : []
-    );
-
-    const colorIds = productColors.map((color) => color.id);
-
-    const colorImages = await Image.findAll({
-      where: {
-        related_type: "productColor",
-        related_id: {
-          [Op.in]: colorIds,
-        },
-      },
-      attributes: ["image_url", "alt_text", "related_id"],
-    });
-
-    // Map images to their respective colors
-    const imagesByColorId = {};
-    colorImages.forEach((img) => {
-      if (!imagesByColorId[img.related_id]) {
-        imagesByColorId[img.related_id] = [];
-      }
-      imagesByColorId[img.related_id].push({
-        image_url: img.image_url,
-        alt_text: img.alt_text,
-      });
-    });
-
-    // Attach images array to each color
-    product.ProductVariants.forEach((variant) => {
-      if (variant.ProductColor) {
-        variant.ProductColor.images =
-          imagesByColorId[variant.ProductColor.id] || [];
-      }
-    });
 
     // Attach average rating to product
     const productWithRating = {
@@ -369,6 +570,7 @@ export const getBestSellersProducts = async (req, res) => {
           where: { related_type: "product" },
           required: false,
           attributes: ["image_url"],
+          limit: 1, // Only one image
         },
       ],
       having: sequelize.and(
@@ -385,7 +587,14 @@ export const getBestSellersProducts = async (req, res) => {
       ),
       order: [[sequelize.literal("reviewCount"), "DESC"]],
       limit: 10,
-      group: ['Product.id']
+      group: [ 'Product.id' ]
+      
+      // need to try this to get the best sellers
+      // order: [
+      //   [sequelize.literal("reviewCount"), "DESC"],
+      //   [sequelize.literal("avgRating"), "DESC"],
+      // ],
+      // limit: 10, // Top 10 best sellers
     });
 
     // Format the response

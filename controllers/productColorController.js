@@ -1,31 +1,51 @@
-import { ProductColor, Product, ProductVariant } from "../config/db.js";
+import { ProductColor, Product, ProductVariant, Image } from "../config/db.js";
+import { uploadToImgBB } from "../utils/uploadToImgBB.js";  
+
 
 // Create a new product color
 export const createProductColor = async (req, res) => {
   try {
-    const { color_name, color_code, product_id } = req.body;
+    const { color_name, color_code, product_name } = req.body;
 
-    if (!product_id) {
-      return res.status(400).json({ message: "product_id is required" });
+    if (!product_name) {
+      return res.status(400).json({ message: "product_name is required" });
     }
 
-    // Check if product exists
-    const product = await Product.findByPk(product_id);
+    // Find product by name
+    const product = await Product.findOne({ where: { name: product_name } });
     if (!product) {
       return res.status(400).json({ message: "Product not found" });
     }
 
-    const existing = await ProductColor.findOne({ where: { color_name, product_id } });
+    const existing = await ProductColor.findOne({ where: { color_name, product_id: product.id } });
     if (existing) {
       return res.status(400).json({ message: "Color already exists for this product" });
     }
 
-    const newColor = await ProductColor.create({ color_name, color_code, product_id });
+    const newColor = await ProductColor.create({ color_name, color_code, product_id: product.id });
+
+    // Handle image uploads for product color
+    const files = req.files || [];
+    const colorImageUrls = await Promise.all(
+      files.map(async (file) => await uploadToImgBB(file.path))
+    );
+
+    // Save images linked to the new product color
+    await Promise.all(
+      colorImageUrls.map((url) =>
+        Image.create({
+          image_url: url,
+          alt_text: "",
+          related_type: "productColor",
+          related_id: newColor.id,
+        })
+      )
+    );
 
     // Automatically link existing ProductVariants without product_color_id to this new ProductColor if color_name matches
     const variantsToUpdate = await ProductVariant.findAll({
       where: {
-        product_id,
+        product_id: product.id,
         product_color_id: null,
       },
     });
@@ -52,10 +72,12 @@ export const createProductColor = async (req, res) => {
         updatedCount++;
       }
     }
+    
 
     res.status(201).json({
       message: `Color created for product and linked to ${updatedCount} variants`,
       color: newColor,
+      images: colorImageUrls,
     });
   } catch (err) {
     res
@@ -69,7 +91,9 @@ export const getAllProductColors = async (req, res) => {
   try {
     const colors = await ProductColor.findAll();
     res.json(colors);
-  } catch (err) {
+  } catch ( err )
+  {
+    console.error("Error fetching product colors:", err);
     res
       .status(500)
       .json({ message: "Failed to fetch colors", error: err.message });

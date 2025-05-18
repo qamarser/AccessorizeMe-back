@@ -7,7 +7,11 @@ export const addToWishlist = async (req, res) => {
 
     // Check if already in wishlist
     const exists = await Wishlist.findOne({ where: { user_id, product_id } });
-    if (exists) return res.status(400).json({ message: "Already in wishlist" });
+    // if (exists) return res.status(400).json({ message: "Already in wishlist" });
+    if (exists) {
+      return res.status(200).json({ alreadyAdded: true });
+    }
+    
 
     const item = await Wishlist.create({ user_id, product_id });
     res.status(201).json(item);

@@ -7,11 +7,12 @@ import {
   deleteProductColor,
 } from "../controllers/productColorController.js";
 import { isAdmin, verifyToken } from "../middleware/authMiddleware.js";
+import { uploadAny } from "../middleware/upload.js";
 
 const router = express.Router();
 
 // Create a new color
-router.post("/", verifyToken, isAdmin, createProductColor);
+router.post("/", verifyToken, isAdmin, uploadAny, createProductColor);
 
 // Get all colors
 router.get("/", getAllProductColors);

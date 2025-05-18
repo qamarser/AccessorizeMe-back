@@ -31,17 +31,49 @@ export const createCategory = async (req, res) => {
 };
 
 // Admin: Update category
+// export const updateCategory = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const updated = await Category.update(req.body, { where: { id } });
+//     res.json({ message: "Category updated", updated });
+//   } catch (err) {
+//     res
+//       .status(500)
+//       .json({ message: "Failed to update category", error: err.message });
+//   }
+// };
 export const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const updated = await Category.update(req.body, { where: { id } });
-    res.json({ message: "Category updated", updated });
+    const { name } = req.body;
+
+    const category = await Category.findByPk(id);
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    let imageUrl = category.background_image_url;
+
+    // If there's a new image uploaded, upload it to ImgBB
+    if (req.files && req.files.length > 0) {
+      const filePath = req.files[0].path;
+      imageUrl = await uploadToImgBB(filePath);
+    }
+
+    await category.update({
+      name,
+      background_image_url: imageUrl,
+    });
+
+    res.json(category);
   } catch (err) {
+    console.error("Update Category Error:", err);
     res
       .status(500)
       .json({ message: "Failed to update category", error: err.message });
   }
 };
+
 
 // Admin: Delete category
 export const deleteCategory = async (req, res) => {

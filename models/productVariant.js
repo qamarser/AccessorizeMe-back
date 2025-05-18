@@ -9,6 +9,10 @@ export default (sequelize) => {
       additional_price: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
       stock: { type: DataTypes.INTEGER, defaultValue: 0 },
       created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+      product_color_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true, // or false if required
+      },
     },
     { timestamps: false }
   );

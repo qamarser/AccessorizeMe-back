@@ -79,9 +79,12 @@ Brand.hasMany(Product, { foreignKey: "brand_id" });
 Product.belongsTo(Brand, { foreignKey: "brand_id" });
 
 // PRODUCT RELATIONS
+
+// Product - ProductVariant
 Product.hasMany(ProductVariant, { foreignKey: "product_id" });
 ProductVariant.belongsTo(Product, { foreignKey: "product_id" });
 
+// Product - ProductColor
 Product.hasMany(ProductColor, { foreignKey: "product_id" });
 ProductColor.belongsTo(Product, { foreignKey: "product_id" });
 
@@ -103,8 +106,15 @@ Image.belongsTo(ProductColor, {
 });
 
 
-Product.hasMany(Image, { foreignKey: "related_id", constraints: false });
-Image.belongsTo(Product, { foreignKey: "related_id", constraints: false });
+Product.hasMany(Image, {
+  foreignKey: "related_id",
+  constraints: false,
+  scope: { related_type: "product" },
+});
+Image.belongsTo(Product, {
+  foreignKey: "related_id",
+  constraints: false,
+});
 
 Product.hasMany(OrderItem, { foreignKey: "product_id" });
 OrderItem.belongsTo(Product, { foreignKey: "product_id" });
@@ -118,10 +128,24 @@ StockLog.belongsTo(Product, { foreignKey: "product_id" });
 Product.hasMany(ProductTag, { foreignKey: "product_id" });
 ProductTag.belongsTo( Product, { foreignKey: "product_id" } );
 
+  
 // CART <-> PRODUCT
 Product.hasMany(Cart, { foreignKey: "product_id" });
 Cart.belongsTo(Product, { foreignKey: "product_id" });
 
+// CART <-> PRODUCTVARIANT
+ProductVariant.hasMany(Cart, { foreignKey: "product_variant_id" });
+Cart.belongsTo(ProductVariant, { foreignKey: "product_variant_id" });
+
+// Add missing association between Image and ProductVariant
+ProductVariant.hasMany(Image, {
+  foreignKey: "related_id",
+  constraints: false,
+  scope: {
+    related_type: "productVariant",
+  },
+});
+Image.belongsTo(ProductVariant, { foreignKey: "related_id", constraints: false });
 
 // ORDER RELATIONS
 Order.hasMany(OrderItem, { foreignKey: "order_id" });
@@ -154,3 +178,5 @@ export {
   ActivityLog,
   ProductTag,
 };
+
+export { default as sequelize } from "./sequelize.js";

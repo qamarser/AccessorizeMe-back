@@ -1,9 +1,17 @@
-import { Cart, Product, User, Image } from "../config/db.js";
+import {
+  Cart,
+  Product,
+  User,
+  Image,
+  ProductVariant,
+  ProductColor,
+} from "../config/db.js";
+import { Op } from "sequelize";
 
 // Add to cart
 export const addToCart = async (req, res) => {
   try {
-    const { product_id, quantity } = req.body;
+    const { product_id, product_variant_id, quantity } = req.body;
     const user_id = req.user.id;
 
     // Ensure product exists
@@ -12,8 +20,20 @@ export const addToCart = async (req, res) => {
       return res.status(400).json({ message: "Invalid product ID" });
     }
 
+    // If variant id is provided, ensure it exists
+    if (product_variant_id) {
+      const variant = await ProductVariant.findByPk(product_variant_id);
+      if (!variant) {
+        return res.status(400).json({ message: "Invalid product variant ID" });
+      }
+    }
+
     const [cartItem, created] = await Cart.findOrCreate({
-      where: { user_id, product_id },
+      where: {
+        user_id,
+        product_id,
+        product_variant_id: product_variant_id || null,
+      },
       defaults: { quantity },
     });
 
@@ -24,12 +44,12 @@ export const addToCart = async (req, res) => {
 
     res.status(200).json({ message: "Product added to cart", cartItem });
   } catch (err) {
+    console.error("Error in addToCart:", err);
     res
       .status(500)
-      .json({ message: "Error adding to cart", error: err.message });
+      .json({ message: "Error adding to cart", error: err.message, stack: err.stack });
   }
 };
-
 
 // View cart
 export const getCart = async (req, res) => {
@@ -44,19 +64,70 @@ export const getCart = async (req, res) => {
           include: [
             {
               model: Image,
-              where: { related_type: "product" },
               required: false,
+              where: {
+                related_type: {
+                  [Op.in]: ["productVariant", "productColor", "product", "other"]
+                }
+              },
               attributes: ["image_url", "alt_text"],
-            },
+              limit: 1,
+              constraints: false,
+            }
           ],
         },
+        {
+          model: ProductVariant,
+          required: false,
+            include: [
+              {
+                model: Image,
+                where: { related_type: ["productVariant", "productColor", "product", "other"] },
+                required: false,
+                attributes: ["image_url", "alt_text"],
+                limit: 1,
+                constraints: false,
+              },
+              {
+                model: ProductColor,
+                required: false,
+                include: [
+                  {
+                    model: Image,
+                    where: { related_type: ["productColor", "product", "other"] },
+                    required: false,
+                    attributes: ["image_url", "alt_text"],
+                    limit: 1,
+                    constraints: false,
+                  },
+                ],
+              },
+            ],
+          constraints: false,
+        },
       ],
+      constraints: false,
     });
 
-    const total = cart.reduce(
-      (sum, item) => sum + (item.Product?.price || 0) * item.quantity,
-      0
-    );
+    // Debug log image URLs
+    cart.forEach(item => {
+      if (item.Product && item.Product.Images && item.Product.Images.length > 0) {
+        console.log(`Product ID ${item.Product.id} Image URL:`, item.Product.Images[0].image_url);
+      }
+      if (item.ProductVariant && item.ProductVariant.Images && item.ProductVariant.Images.length > 0) {
+        console.log(`ProductVariant ID ${item.ProductVariant.id} Image URL:`, item.ProductVariant.Images[0].image_url);
+      }
+      if (item.ProductVariant && item.ProductVariant.ProductColor && item.ProductVariant.ProductColor.Images && item.ProductVariant.ProductColor.Images.length > 0) {
+        console.log(`ProductColor ID ${item.ProductVariant.ProductColor.id} Image URL:`, item.ProductVariant.ProductColor.Images[0].image_url);
+      }
+    });
+
+    let total = 0;
+    if (cart && Array.isArray(cart)) {
+      total = cart.reduce(function(sum, item) {
+        return sum + (item.Product && item.Product.price ? parseFloat(item.Product.price) : 0) * item.quantity;
+      }, 0);
+    }
 
     res.status(200).json({ items: cart, total });
   } catch (err) {
@@ -104,7 +175,6 @@ export const deleteCartItem = async (req, res) => {
   }
 };
 
-
 // Clear cart for a user
 export const clearCart = async (req, res) => {
   try {
@@ -113,6 +183,8 @@ export const clearCart = async (req, res) => {
     res.status(200).json({ message: "Cart cleared" });
   } catch (err) {
     console.error("Error clearing cart:", err.message);
-    res.status(500).json({ message: "Error clearing cart", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Error clearing cart", error: err.message });
   }
 };
