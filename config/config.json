@@ -1,0 +1,26 @@
+{
+  "development": {
+    "username": "root",
+    "password": "qs12345",
+    "database": "accessorizeme",
+    "host": "localhost",
+    "port": 3306,
+    "dialect": "mysql"
+  },
+  "test": {
+    "username": "root",
+    "password": "qs12345",
+    "database": "accessorizeme_test",
+    "host": "localhost",
+    "port": 3306,
+    "dialect": "mysql"
+  },
+  "production": {
+    "username": "root",
+    "password": "qs12345",
+    "database": "accessorizeme_prod",
+    "host": "localhost",
+    "port": 3306,
+    "dialect": "mysql"
+  }
+}

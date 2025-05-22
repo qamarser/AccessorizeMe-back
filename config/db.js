@@ -105,7 +105,6 @@ Image.belongsTo(ProductColor, {
   constraints: false,
 });
 
-
 Product.hasMany(Image, {
   foreignKey: "related_id",
   constraints: false,
@@ -126,16 +125,19 @@ Product.hasMany(StockLog, { foreignKey: "product_id" });
 StockLog.belongsTo(Product, { foreignKey: "product_id" });
 
 Product.hasMany(ProductTag, { foreignKey: "product_id" });
-ProductTag.belongsTo( Product, { foreignKey: "product_id" } );
+ProductTag.belongsTo(Product, { foreignKey: "product_id" });
 
-  
-// CART <-> PRODUCT
-Product.hasMany(Cart, { foreignKey: "product_id" });
-Cart.belongsTo(Product, { foreignKey: "product_id" });
+  // CART <-> PRODUCT
+  Product.hasMany(Cart, { foreignKey: "product_id" });
+  Cart.belongsTo(Product, { foreignKey: "product_id" });
 
-// CART <-> PRODUCTVARIANT
-ProductVariant.hasMany(Cart, { foreignKey: "product_variant_id" });
-Cart.belongsTo(ProductVariant, { foreignKey: "product_variant_id" });
+  // CART <-> PRODUCTVARIANT
+  ProductVariant.hasMany(Cart, { foreignKey: "product_variant_id" });
+  Cart.belongsTo(ProductVariant, { foreignKey: "product_variant_id" });
+
+  // CART <-> PRODUCTCOLOR
+  ProductColor.hasMany(Cart, { foreignKey: "product_color_id" });
+  Cart.belongsTo(ProductColor, { foreignKey: "product_color_id" });
 
 // Add missing association between Image and ProductVariant
 ProductVariant.hasMany(Image, {
@@ -145,7 +147,10 @@ ProductVariant.hasMany(Image, {
     related_type: "productVariant",
   },
 });
-Image.belongsTo(ProductVariant, { foreignKey: "related_id", constraints: false });
+Image.belongsTo(ProductVariant, {
+  foreignKey: "related_id",
+  constraints: false,
+});
 
 // ORDER RELATIONS
 Order.hasMany(OrderItem, { foreignKey: "order_id" });
