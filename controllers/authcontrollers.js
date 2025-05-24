@@ -61,8 +61,8 @@ export const login = async (req, res) => {
 
     res.cookie("token", token, {
       httpOnly: true,
-      secure: false, // temporarily disable secure flag for local development
-      sameSite: "Lax", // changed from Strict to Lax to improve cookie sending
+      secure: true, // set secure flag true for production
+      sameSite: "None", // set sameSite to None for cross-site cookies
       maxAge: parseInt(process.env.COOKIE_EXPIRES) || 24 * 60 * 60 * 1000, // 1 day default
     });
 
