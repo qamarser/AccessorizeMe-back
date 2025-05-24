@@ -1,16 +1,15 @@
-import
-  {
+import {
   User,
   Product,
   Image,
   Review,
   Category,
   ProductColor,
-    ProductVariant,
+  ProductVariant,
   // Tag,
 } from "../config/db.js";
 import { Op, fn, col } from "sequelize";
-import { uploadToImgBB } from "../utils/uploadToImgBB.js";  // Added import
+import { uploadToImgBB } from "../utils/uploadToImgBB.js"; // Added import
 import sequelize from "sequelize";
 
 // Admin: Add Product
@@ -87,7 +86,6 @@ import sequelize from "sequelize";
 //       await Image.bulkCreate(uploadedImages);
 //     }
 
-    
 //     // Save main product images
 //     await Promise.all(
 //       imageUrls.map((url) =>
@@ -272,13 +270,14 @@ export const createProduct = async (req, res) => {
       message: "Product created successfully",
       product: newProduct,
       images: imageUrls,
-    } );
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Failed to create product", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to create product", error: err.message });
   }
 };
-
 
 // Admin: Update Product (category by name)
 export const updateProduct = async (req, res) => {
@@ -287,7 +286,9 @@ export const updateProduct = async (req, res) => {
 
     let category_id;
     if (category_name) {
-      const category = await Category.findOne({ where: { name: category_name } });
+      const category = await Category.findOne({
+        where: { name: category_name },
+      });
       if (!category) {
         return res.status(404).json({ message: "Category not found" });
       }
@@ -299,10 +300,14 @@ export const updateProduct = async (req, res) => {
       ...(category_id && { category_id }),
     };
 
-    const [updated] = await Product.update(updateData, { where: { id: req.params.id } });
+    const [updated] = await Product.update(updateData, {
+      where: { id: req.params.id },
+    });
 
     if (updated === 0) {
-      return res.status(404).json({ message: "Product not found or no changes made" });
+      return res
+        .status(404)
+        .json({ message: "Product not found or no changes made" });
     }
 
     res.json({ message: "Product updated successfully" });
@@ -316,8 +321,10 @@ export const updateProduct = async (req, res) => {
 // Admin: Delete Product
 export const deleteProduct = async (req, res) => {
   try {
-    await Product.destroy( { where: { id: req.params.id } } );
-    if (!deleted) return res.status(404).json({ message: "Product not found" });
+    const deleted = await Product.destroy({ where: { id: req.params.id } });
+    if (!deleted) {
+      return res.status(404).json({ message: "Product not found" });
+    }
     res.json({ message: "Product deleted" });
   } catch (err) {
     res
@@ -365,11 +372,10 @@ export const getAllProducts = async (req, res) => {
     // Get total count for pagination
     const totalCount = await Product.count({ where: whereClause });
 
-       
     // Get the products with pagination and sorting
     const products = await Product.findAll({
       where: whereClause,
-      attributes: ["id", "name", "price"],
+      attributes: ["id", "name", "price", "description"],
       include: [
         {
           model: Image,
@@ -427,7 +433,7 @@ export const getAllProducts = async (req, res) => {
 
     // res.json(formatted);
     res.json({
-     formatted,
+      formatted,
       totalCount,
       totalPages: Math.ceil(totalCount / limit),
       currentPage: parseInt(page),
@@ -439,7 +445,6 @@ export const getAllProducts = async (req, res) => {
     });
   }
 };
-
 
 export const getProductById = async (req, res) => {
   try {
@@ -501,7 +506,6 @@ export const getProductById = async (req, res) => {
         */
       ],
     });
-
 
     if (!product) return res.status(404).json({ message: "Product not found" });
 
@@ -587,8 +591,8 @@ export const getBestSellersProducts = async (req, res) => {
       ),
       order: [[sequelize.literal("reviewCount"), "DESC"]],
       limit: 10,
-      group: [ 'Product.id' ]
-      
+      group: ["Product.id"],
+
       // need to try this to get the best sellers
       // order: [
       //   [sequelize.literal("reviewCount"), "DESC"],
@@ -611,6 +615,8 @@ export const getBestSellersProducts = async (req, res) => {
 
     res.json(formatted);
   } catch (err) {
-    res.status(500).json({ message: "Failed to fetch best sellers", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to fetch best sellers", error: err.message });
   }
 };
