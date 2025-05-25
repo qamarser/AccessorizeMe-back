@@ -554,7 +554,7 @@ export const getBestSellersProducts = async (req, res) => {
         [
           sequelize.literal(`(
             SELECT AVG(rating)
-            FROM reviews AS review
+            FROM Reviews AS review
             WHERE review.product_id = Product.id
           )`),
           "avgRating",
@@ -562,7 +562,7 @@ export const getBestSellersProducts = async (req, res) => {
         [
           sequelize.literal(`(
             SELECT COUNT(*)
-            FROM reviews AS review
+            FROM Reviews AS review
             WHERE review.product_id = Product.id
           )`),
           "reviewCount",
@@ -580,12 +580,12 @@ export const getBestSellersProducts = async (req, res) => {
       having: sequelize.and(
         sequelize.literal(`(
           SELECT AVG(rating)
-          FROM reviews AS review
+          FROM Reviews AS review
           WHERE review.product_id = Product.id
         ) >= 3`),
         sequelize.literal(`(
           SELECT AVG(rating)
-          FROM reviews AS review
+          FROM Reviews AS review
           WHERE review.product_id = Product.id
         ) <= 5`)
       ),
@@ -615,6 +615,7 @@ export const getBestSellersProducts = async (req, res) => {
 
     res.json(formatted);
   } catch (err) {
+    console.error("Error in getBestSellersProducts:", err);
     res
       .status(500)
       .json({ message: "Failed to fetch best sellers", error: err.message });
