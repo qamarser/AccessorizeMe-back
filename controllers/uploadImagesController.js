@@ -21,6 +21,7 @@ export const uploadImages = async (req, res) => {
     const uploadedImages = [];
 
     for (const file of files) {
+      // The uploadToImgBB utility now converts images to WebP before upload
       const imageUrl = await uploadToImgBB(file.path);
       const imageRecord = await Image.create({
         related_type,

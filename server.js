@@ -17,6 +17,7 @@ import variantRoutes from "./routes/variantRoutes.js";
 import imageRoutes from "./routes/imageRoutes.js";
 import productColorRoutes from "./routes/productColorRoutes.js";
 import wishlistRoutes from "./routes/wishlistRoutes.js";
+import sitemapRoutes from "./routes/sitemapRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -54,6 +55,8 @@ app.use( "/api/variants", variantRoutes );
 app.use("/api/images", imageRoutes);
 app.use( "/api/productcolors", productColorRoutes );
 app.use("/api/wishlist", wishlistRoutes);
+
+app.use("/", sitemapRoutes);
 
 // Sync database and start server
 const PORT = process.env.PORT || 5000;
